@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEUTRALIZE.AI — Make AI Text Undetectable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface2: #f0f2f5;
+      --border: #e4e7ec;
+      --border2: #d0d5dd;
+      --text: #0f1117;
+      --text2: #6b7280;
+      --text3: #9ca3af;
+      --accent: #5b4bdb;
+      --accent-light: #ede9ff;
+      --accent-hover: #4838c9;
+      --green: #12b76a;
+      --green-bg: #ecfdf3;
+      --green-border: #a9efc5;
+      --amber: #f59e0b;
+      --amber-bg: #fffbeb;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 32px; }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+
+    .nav-logo {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #5b4bdb, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo svg { width: 16px; height: 16px; fill: white; }
+
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-link:hover { background: var(--surface2); color: var(--text); }
+    .nav-link.active { background: var(--accent-light); color: var(--accent); }
+
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    .btn-nav {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text2);
+      transition: all 0.15s;
+    }
+    .btn-nav:hover { background: var(--surface2); color: var(--text); }
+    .btn-nav-primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .btn-nav-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: white; }
+
+    /* ── Main Layout ── */
+    main {
+      flex: 1;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 24px 40px;
+    }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 20px; }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.4px;
+      margin-bottom: 4px;
+    }
+
+    .page-sub { font-size: 13px; color: var(--text2); }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .toolbar-divider { width: 1px; height: 24px; background: var(--border); }
+
+    .select-wrap { display: flex; flex-direction: column; gap: 3px; }
+
+    .select-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    select {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 32px 7px 11px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 0.15s;
+    }
+    select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,75,219,0.1); }
+
+    .toolbar-spacer { flex: 1; }
+
+    .word-limit {
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface2);
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Editor ── */
+    .editor-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 480px;
+    }
+
+    @media (max-width: 768px) {
+      .editor-wrap { grid-template-columns: 1fr; }
+      .editor-divider { display: none; }
+    }
+
+    /* ── Pane ── */
+    .pane { display: flex; flex-direction: column; min-height: 480px; }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pane-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .pane-title-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--border2);
+    }
+    .pane-title-dot.active { background: var(--green); box-shadow: 0 0 0 2px var(--green-bg); }
+
+    .pane-meta { display: flex; align-items: center; gap: 8px; }
+
+    .word-count { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    .icon-btn {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .icon-btn:hover { background: var(--surface2); color: var(--text2); border-color: var(--border2); }
+    .icon-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.8;
+      resize: none;
+      font-family: inherit;
+    }
+    textarea:focus { outline: none; }
+    textarea::placeholder { color: var(--text3); }
+
+    .pane-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Center divider with button ── */
+    .editor-divider {
+      width: 1px;
+      background: var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .humanize-btn-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+
+    .btn-humanize {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      border: none;
+      background: linear-gradient(135deg, #5b4bdb, #8b5cf6);
+      color: white;
+      box-shadow: 0 4px 14px rgba(91,75,219,0.35);
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      letter-spacing: -0.2px;
+    }
+    .btn-humanize:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(91,75,219,0.45); }
+    .btn-humanize:active { transform: scale(0.98); }
+    .btn-humanize:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-humanize svg { width: 14px; height: 14px; fill: none; stroke: white; stroke-width: 2.5; }
+
+    /* ── Output body ── */
+    .output-body {
+      flex: 1;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .output-placeholder { color: var(--text3); font-style: italic; }
+
+    .cursor {
+      display: inline-block;
+      width: 2px; height: 16px;
+      background: var(--accent);
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: blink 0.8s step-end infinite;
+      border-radius: 1px;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Badges ── */
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      background: var(--surface2);
+    }
+    .badge-green { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); border-color: #fde68a; }
+    .badge-red   { background: var(--red-bg);   color: var(--red);   border-color: #fecaca; }
+
+    .diff-toggle {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .diff-toggle input { cursor: pointer; accent-color: var(--accent); }
+    .highlight { background: rgba(91,75,219,0.1); border-radius: 2px; color: var(--accent); }
+
+    /* ── Bottom actions ── */
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .bottom-left { display: flex; gap: 8px; align-items: center; }
+    .bottom-right { display: flex; gap: 8px; align-items: center; }
+
+    .btn {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text2);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background: var(--surface2); color: var(--text); }
+    .btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    .btn-clear { color: var(--text3); }
+    .btn-export { display: none; }
+
+    /* ── Error ── */
+    .error-bar {
+      margin-top: 10px;
+      padding: 11px 14px;
+      background: var(--red-bg);
+      border: 1px solid #fecaca;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--red);
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow);
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .stat-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stat-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .stat-icon.green { background: var(--green-bg); color: var(--green); }
+    .stat-icon.purple { background: var(--accent-light); color: var(--accent); }
+    .stat-icon.amber { background: var(--amber-bg); color: var(--amber); }
+
+    .stat-value { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .stat-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-top: 1px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--text3);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 0.7s linear infinite; display: inline-block; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a class="nav-brand" href="/">
+      <div class="nav-logo">
+        <svg viewBox="0 0 24 24"><path d="M13 2L4.09 12.26a1 1 0 0 0 .91 1.74h7L11 22l8.91-10.26a1 1 0 0 0-.91-1.74h-7Z"/></svg>
+      </div>
+      NEUTRALIZE.AI
+    </a>
+    <div class="nav-links">
+      <a class="nav-link active" href="/">Humanizer</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <button class="btn-nav" onclick="handleLogout()">Log out</button>
+    <button class="btn-nav btn-nav-primary">Upgrade ✦</button>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1 class="page-title">AI Text Humanizer</h1>
+    <p class="page-sub">Paste AI-generated content below and get natural, human-sounding prose instantly.</p>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-label">Settings</span>
+    <div class="toolbar-divider"></div>
+
+    <div class="select-wrap">
+      <span class="select-label">Tone</span>
+      <select id="toneSelect">
+        <option value="casual">💬 Casual</option>
+        <option value="academic">🎓 Academic</option>
+        <option value="professional">💼 Professional</option>
+        <option value="genz">⚡ Gen Z</option>
+        <option value="storytelling">📖 Storytelling</option>
+        <option value="friendly">😊 Friendly</option>
+      </select>
+    </div>
+
+    <div class="select-wrap">
+      <span class="select-label">Region</span>
+      <select id="regionSelect">
+        <option value="neutral">🌐 Neutral English</option>
+        <option value="us">🇺🇸 US English</option>
+        <option value="uk">🇬🇧 UK English</option>
+        <option value="student">📚 Student</option>
+        <option value="nepali">🇳🇵 Nepali-English</option>
+      </select>
+    </div>
+
+    <div class="toolbar-spacer"></div>
+    <div class="word-limit" id="wordLimitBadge">0 / 500 words</div>
+  </div>
+
+  <!-- Editor -->
+  <div class="editor-wrap">
+
+    <!-- Input Pane -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title">
+          <span class="pane-title-dot"></span>
+          Original AI Text
+        </div>
+        <div class="pane-meta">
+          <span class="word-count" id="inputCount">0 words</span>
+          <button class="icon-btn" title="Clear input" onclick="clearInput()">
+            <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg>
+          </button>
+        </div>
+      </div>
+      <textarea id="inputText" placeholder="Paste your AI-generated text here…&#10;&#10;Try pasting a paragraph from ChatGPT, Gemini, or any AI tool." spellcheck="false"></textarea>
+      <div class="pane-footer">
+        <span style="font-size:12px;color:var(--text3);">Tip: Works best with 50–500 words</span>
+      </div>
+    </div>
+
+    <!-- Center divider with humanize button -->
+    <div class="editor-divider">
+      <div class="humanize-btn-wrap">
+        <button class="btn-humanize" id="humanizeBtn" onclick="humanize()">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Humanize
+        </button>
+      </div>
+    </div>
+
+    <!-- Output Pane -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title">
+          <span class="pane-title-dot" id="outputDot"></span>
+          Humanized Output
+        </div>
+        <div class="pane-meta">
+          <span class="word-count" id="outputCount">—</span>
+          <button class="icon-btn" id="copyBtn" title="Copy to clipboard" onclick="copyOutput()" style="display:none;">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="output-body" id="outputBody">
+        <span class="output-placeholder">Your humanized text will appear here after clicking Humanize →</span>
+      </div>
+      <div class="pane-footer" id="outputFooter" style="display:none;">
+        <span class="badge" id="aiBadge"></span>
+        <span class="badge" id="readBadge"></span>
+        <label class="diff-toggle">
+          <input type="checkbox" id="diffToggle" onchange="toggleDiff()"> show changes
+        </label>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Error -->
+  <div class="error-bar" id="errorBar">
+    ⚠ <span id="errorMsg"></span>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <div class="bottom-left">
+      <button class="btn btn-clear" onclick="clearAll()">
+        <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/></svg>
+        Clear all
+      </button>
+    </div>
+    <div class="bottom-right">
+      <button class="btn btn-export" id="exportBtn" onclick="exportTxt()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export .txt
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value" id="statAI">—</div>
+        <div class="stat-label">Est. AI Score</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">
+        <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value" id="statRead">—</div>
+        <div class="stat-label">Readability</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value" id="statWords">—</div>
+        <div class="stat-label">Words Output</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  NEUTRALIZE.AI · Lets Fool Assignment Checkers Together! 🚀
+</footer>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="/firebase-config.js"></script>
+
+<script>
+  const inputEl        = document.getElementById('inputText');
+  const outputEl       = document.getElementById('outputBody');
+  const inputCount     = document.getElementById('inputCount');
+  const outputCount    = document.getElementById('outputCount');
+  const humanizeBtn    = document.getElementById('humanizeBtn');
+  const copyBtn        = document.getElementById('copyBtn');
+  const exportBtn      = document.getElementById('exportBtn');
+  const outputFooter   = document.getElementById('outputFooter');
+  const errorBar       = document.getElementById('errorBar');
+  const errorMsg       = document.getElementById('errorMsg');
+  const statsRow       = document.getElementById('statsRow');
+  const outputDot      = document.getElementById('outputDot');
+  const wordLimitBadge = document.getElementById('wordLimitBadge');
+
+  let rawOutput    = '';
+  let originalText = '';
+
+  // ── Hide page until auth check completes ──
+  document.body.style.visibility = 'hidden';
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = '/login.html';
+    } else {
+      document.body.style.visibility = 'visible';
+    }
+  });
+
+  // ── Logout ──
+  async function handleLogout() {
+    await auth.signOut();
+    window.location.href = '/login.html';
+  }
+
+  // ── Word count ──
+  inputEl.addEventListener('input', () => {
+    const w = wordCount(inputEl.value);
+    inputCount.textContent = w + (w === 1 ? ' word' : ' words');
+    wordLimitBadge.textContent = w + ' / 500 words';
+    wordLimitBadge.style.color = w > 500 ? 'var(--red)' : '';
+  });
+
+  function wordCount(t) {
+    return t.trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  // ── AI score heuristic ──
+  function estimateAIScore(text) {
+    let score = 0;
+    const lower = text.toLowerCase();
+
+    const aiPhrases = [
+      'furthermore','moreover','in conclusion','it is important to note',
+      'delve into','testament to','notably','additionally','consequently',
+      'utilize','leverage','it is worth noting','undoubtedly',
+      'has been shown','has demonstrated','it is clear that','one could argue',
+      'all things considered','in essence','ultimately','thus','therefore',
+      'hence','exemplify','facilitate','paradigm','unprecedented',
+      'multifaceted','in light of','notwithstanding'
+    ];
+    score += aiPhrases.filter(p => lower.includes(p)).length * 12;
+
+    const contractions = ["i'm","don't","it's","can't","won't","i'd","that's","you're","we've","i've","shouldn't","wouldn't","aren't"];
+    const contCount = contractions.filter(c => lower.includes(c)).length;
+    if (contCount === 0) score += 15;
+    else if (contCount === 1) score += 8;
+
+    const passivePattern = /\b(is|are|was|were)\s+\w+ed\b/gi;
+    const passiveCount = (text.match(passivePattern) || []).length;
+    const sentences = text.split(/[.!?]+/).filter(Boolean);
+    if (sentences.length > 0 && passiveCount / sentences.length > 0.4) score += passiveCount * 2;
+
+    const sentLengths = sentences.map(s => s.trim().split(/\s+/).length);
+    if (sentLengths.length > 2) {
+      const avg = sentLengths.reduce((a,b) => a+b) / sentLengths.length;
+      const variance = sentLengths.reduce((a,s) => a + Math.pow(s-avg,2), 0) / sentLengths.length;
+      if (variance < 15) score += 18;
+    }
+
+    const casualWords = ['like','you know','honestly','literally','basically','pretty','really','actually','just','kind of','i think','i mean','i guess','anyway'];
+    if (casualWords.filter(w => lower.includes(w)).length === 0) score += 10;
+
+    if ((text.match(/[!?]/g) || []).length < 1 && text.length > 100) score += 8;
+    if (/^(furthermore|moreover|additionally|in conclusion|to sum up)/gmi.test(text)) score += 20;
+
+    const formalTerms = ['implement','aspect','dynamic','leverage','synergy','optimize','facilitate','amplify','demonstrate','highlight'];
+    score += formalTerms.filter(t => lower.includes(t)).length * 6;
+
+    if ((text.match(/\b(i|we|you|me|us|our)\b/gi) || []).length === 0) score += 12;
+
+    return Math.min(95, Math.max(5, score));
+  }
+
+  function scoreClass(s) {
+    return s < 30 ? 'badge-green' : s < 65 ? 'badge-amber' : 'badge-red';
+  }
+
+  function readabilityLabel(text) {
+    const sentences = text.split(/[.!?]+/).filter(Boolean);
+    const avg = wordCount(text) / Math.max(sentences.length, 1);
+    return avg < 10 ? 'Easy' : avg < 18 ? 'Moderate' : 'Dense';
+  }
+
+  // ── Humanize ──
+  async function humanize() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    originalText = text;
+    rawOutput = '';
+
+    // ✅ FIX: Get the current Firebase user and their ID token
+    const user = auth.currentUser;
+    if (!user) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    let idToken;
+    try {
+      idToken = await user.getIdToken(true); // true = force refresh if expired
+    } catch (e) {
+      showError('Session expired. Please log in again.');
+      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+      return;
+    }
+
+    const tone   = document.getElementById('toneSelect').value;
+    const region = document.getElementById('regionSelect').value;
+
+    humanizeBtn.disabled = true;
+    humanizeBtn.innerHTML = `<span class="spin">⟳</span> Humanizing…`;
+    errorBar.style.display = 'none';
+    outputFooter.style.display = 'none';
+    statsRow.style.display = 'none';
+    copyBtn.style.display = 'none';
+    exportBtn.style.display = 'none';
+    outputDot.classList.remove('active');
+    outputEl.innerHTML = '<span class="cursor"></span>';
+
+    try {
+      const resp = await fetch('/api/humanize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`, // ✅ FIX: send token to backend
+        },
+        body: JSON.stringify({ text, tone, region }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(err.error || 'Server error');
+      }
+
+      const data = await resp.json();
+      if (!data.output) throw new Error('Empty response from server');
+
+      rawOutput = data.output;
+      const wc = wordCount(rawOutput);
+      outputCount.textContent = wc + ' words';
+
+      outputEl.innerHTML = esc(rawOutput);
+      outputDot.classList.add('active');
+
+      const score = estimateAIScore(rawOutput);
+      const aiBadge = document.getElementById('aiBadge');
+      aiBadge.textContent = 'AI ~' + score + '%';
+      aiBadge.className = 'badge ' + scoreClass(score);
+
+      const readBadge = document.getElementById('readBadge');
+      readBadge.textContent = readabilityLabel(rawOutput);
+      readBadge.className = 'badge';
+
+      outputFooter.style.display = 'flex';
+      copyBtn.style.display = 'flex';
+      exportBtn.style.display = 'flex';
+
+      document.getElementById('statAI').textContent = score + '%';
+      document.getElementById('statAI').style.color = score < 30 ? 'var(--green)' : score < 65 ? 'var(--amber)' : 'var(--red)';
+      document.getElementById('statRead').textContent = readabilityLabel(rawOutput);
+      document.getElementById('statWords').textContent = wc;
+      statsRow.style.display = 'flex';
+
+    } catch (err) {
+      showError(err.message || 'Something went wrong');
+      outputEl.innerHTML = '<span class="output-placeholder">Your humanized text will appear here after clicking Humanize →</span>';
+    }
+
+    humanizeBtn.disabled = false;
+    humanizeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Humanize`;
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBar.style.display = 'flex';
+  }
+
+  function esc(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Copy ──
+  function copyOutput() {
+    if (!rawOutput) return;
+    navigator.clipboard.writeText(rawOutput).then(() => {
+      copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>`;
+      copyBtn.style.color = 'var(--green)';
+      setTimeout(() => {
+        copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        copyBtn.style.color = '';
+      }, 1800);
+    });
+  }
+
+  // ── Export ──
+  function exportTxt() {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'humanized-output.txt';
+    a.click();
+  }
+
+  // ── Clear input only ──
+  function clearInput() {
+    inputEl.value = '';
+    inputCount.textContent = '0 words';
+    wordLimitBadge.textContent = '0 / 500 words';
+  }
+
+  // ── Clear all ──
+  function clearAll() {
+    inputEl.value = '';
+    inputCount.textContent = '0 words';
+    wordLimitBadge.textContent = '0 / 500 words';
+    outputEl.innerHTML = '<span class="output-placeholder">Your humanized text will appear here after clicking Humanize →</span>';
+    outputCount.textContent = '—';
+    outputFooter.style.display = 'none';
+    copyBtn.style.display = 'none';
+    exportBtn.style.display = 'none';
+    errorBar.style.display = 'none';
+    statsRow.style.display = 'none';
+    outputDot.classList.remove('active');
+    rawOutput = '';
+    originalText = '';
+    document.getElementById('diffToggle').checked = false;
+  }
+
+  // ── Diff highlight ──
+  function toggleDiff() {
+    const on = document.getElementById('diffToggle').checked;
+    if (!on || !rawOutput) { outputEl.innerHTML = esc(rawOutput); return; }
+    const origWords = new Set(originalText.toLowerCase().split(/\s+/));
+    const tokens = rawOutput.split(/(\s+)/);
+    let html = '';
+    for (const token of tokens) {
+      if (/\s+/.test(token)) { html += token.replace(/\n/g, '<br>'); continue; }
+      const clean = token.toLowerCase().replace(/[^a-z]/g, '');
+      html += (clean && !origWords.has(clean))
+        ? `<span class="highlight">${esc(token)}</span>`
+        : esc(token);
+    }
+    outputEl.innerHTML = html;
+  }
+</script>
+
+</body>
+</html>

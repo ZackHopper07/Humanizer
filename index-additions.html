@@ -1,0 +1,173 @@
+<!--
+  ════════════════════════════════════════════════
+  PASTE THIS into your existing index.html
+
+  1. In <head>, add AFTER your existing scripts:
+  ════════════════════════════════════════════════
+-->
+
+<!-- Inside <head> — Firebase SDKs + your config + auth guard -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="/firebase-config.js"></script>
+<script src="/auth-guard.js"></script>
+
+<!--
+  ════════════════════════════════════════════════
+  2. Add this NAV BAR near the top of <body>
+  ════════════════════════════════════════════════
+-->
+<style>
+  .user-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #1e1e2e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .user-nav .brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #e8ff6b;
+    text-transform: uppercase;
+  }
+
+  .user-nav .right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .user-nav .user-email {
+    font-size: 13px;
+    color: #6b6b8a;
+  }
+
+  .user-nav .logout-btn {
+    background: transparent;
+    border: 1px solid #1e1e2e;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #f0f0f8;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .user-nav .logout-btn:hover {
+    border-color: #e8ff6b;
+    color: #e8ff6b;
+  }
+
+  /* Usage bar widget */
+  .usage-widget {
+    background: #13131a;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+
+  .usage-widget .usage-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .usage-text {
+    font-size: 13px;
+    color: #f0f0f8;
+    font-weight: 500;
+  }
+
+  .usage-sub {
+    font-size: 12px;
+    color: #6b6b8a;
+  }
+
+  .usage-bar {
+    height: 4px;
+    background: #1e1e2e;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .usage-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #e8ff6b;
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.16,1,0.3,1), background 0.3s;
+  }
+</style>
+
+<!-- Nav bar -->
+<nav class="user-nav">
+  <div class="brand">⬡ Humanizer</div>
+  <div class="right">
+    <span class="user-email" id="userEmail">Loading...</span>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </div>
+</nav>
+
+<!--
+  ════════════════════════════════════════════════
+  3. Add this USAGE WIDGET wherever makes sense
+     (above your textarea, inside your main container)
+  ════════════════════════════════════════════════
+-->
+<div class="usage-widget">
+  <div class="usage-top">
+    <span class="usage-text" id="usageText">Loading usage...</span>
+  </div>
+  <div class="usage-sub" id="usageSub"></div>
+  <div class="usage-bar">
+    <div class="usage-bar-fill" id="usageBarFill"></div>
+  </div>
+</div>
+
+<!--
+  ════════════════════════════════════════════════
+  4. UPDATE your humanize button handler
+     Replace your old fetch('/api/humanize', ...) with:
+  ════════════════════════════════════════════════
+-->
+<script>
+  // Example — adapt to match your existing button/function names
+  async function onHumanizeClick() {
+    const text = document.getElementById('inputText').value; // your input field
+    const tone = document.getElementById('toneSelect').value; // your tone select
+    const region = document.getElementById('regionSelect').value; // your region select
+
+    const btn = document.getElementById('humanizeBtn'); // your button
+    const output = document.getElementById('outputText'); // your output field
+
+    if (!text.trim()) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Humanizing...';
+
+    try {
+      const result = await humanizeText(text, tone, region);
+      output.value = result;
+    } catch (err) {
+      alert(err.message); // Replace with your own error display
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Humanize';
+    }
+  }
+</script>
