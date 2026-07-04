@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const admin = require("firebase-admin");
 
 const app = express();
@@ -14,13 +15,45 @@ app.use(express.static(path.join(__dirname, "public")));
 // ─────────────────────────────────────────────
 // Firebase Admin Init
 // ─────────────────────────────────────────────
-const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8'));
+function loadServiceAccount() {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      return JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8'));
+    } catch (err) {
+      console.warn('FIREBASE_SERVICE_ACCOUNT is invalid, falling back to local file.');
+    }
+  }
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+  const candidates = [
+    path.join(__dirname, 'ai-humanizer-b1377-firebase-adminsdk-fbsvc-0dc018ac9f.json'),
+    path.join(__dirname, 'serviceAccount.json'),
+  ];
 
-const db = admin.firestore();
+  for (const filePath of candidates) {
+    if (fs.existsSync(filePath)) {
+      try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (err) {
+        console.warn(`Failed to read Firebase service account file: ${filePath}`);
+      }
+    }
+  }
+
+  return null;
+}
+
+const serviceAccount = loadServiceAccount();
+
+if (serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log('Firebase Admin initialized successfully.');
+} else {
+  console.warn('Firebase Admin credentials not found. Running without Admin SDK. Usage and AI endpoints will be unavailable until configured.');
+}
+
+const db = serviceAccount ? admin.firestore() : null;
 
 // ─────────────────────────────────────────────
 // Admin accounts — no word limit
@@ -555,8 +588,65 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+app.post("/api/premium/checkout", async (req, res) => {
+  const { plan, customerName, customerEmail, cardLast4 } = req.body || {};
+
+  if (plan !== "pro") {
+    return res.status(400).json({ error: "Unsupported plan." });
+  }
+
+  if (!customerName || !customerEmail || !cardLast4) {
+    return res.status(400).json({ error: "Please provide a valid payment payload." });
+  }
+
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripePriceId = process.env.STRIPE_PRICE_ID;
+
+  if (stripeSecretKey && stripePriceId) {
+    try {
+      const params = new URLSearchParams({
+        mode: 'subscription',
+        success_url: `${process.env.APP_URL || 'http://localhost:3000'}/?checkout=success`,
+        cancel_url: `${process.env.APP_URL || 'http://localhost:3000'}/premium.html?checkout=cancel`,
+        'line_items[0][price]': stripePriceId,
+        'line_items[0][quantity]': '1',
+        customer_email: customerEmail,
+      });
+
+      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params,
+      });
+
+      const stripeData = await response.json();
+      if (!response.ok) {
+        throw new Error(stripeData.error?.message || 'Stripe checkout failed');
+      }
+
+      return res.json({ ok: true, checkoutUrl: stripeData.url, message: 'Checkout session created.' });
+    } catch (err) {
+      console.error('Stripe checkout error:', err);
+      return res.status(502).json({ error: 'Stripe checkout could not be created.' });
+    }
+  }
+
+  return res.json({
+    ok: true,
+    mock: true,
+    message: `Pro access enabled for ${customerEmail} using the secure demo checkout gateway.`,
+  });
+});
+
 app.get("/api/usage", requireAuth, async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ error: "Usage tracking is unavailable until Firebase Admin is configured." });
+    }
+
     if (ADMIN_EMAILS.includes(req.user.email)) {
       return res.json({
         wordsUsed: 0, wordsRemaining: 999999,
@@ -595,6 +685,9 @@ app.post("/api/humanize", requireAuth, async (req, res) => {
 
   let limitCheck = { allowed: true, wordsUsed: 0, wordsRemaining: 999999 };
   if (!isAdmin) {
+    if (!db) {
+      return res.status(503).json({ error: "Usage tracking is unavailable until Firebase Admin is configured." });
+    }
     limitCheck = await checkAndUpdateWordCount(req.user.uid, wordCount);
   }
 

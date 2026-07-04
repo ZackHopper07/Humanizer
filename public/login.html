@@ -27,7 +27,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 24px 16px;
     }
 
     body::before {
@@ -99,11 +101,14 @@
       gap: 8px;
     }
 
-    .logo-dot {
-      width: 6px; height: 6px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
+    .logo img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      border-radius: 0;
+      display: block;
+      image-rendering: auto;
+      background: transparent;
     }
 
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
@@ -277,7 +282,7 @@
   <div class="orb orb-2"></div>
 
   <div class="card">
-    <div class="logo"><div class="logo-dot"></div> NEUTRALIZE.AI</div>
+    <div class="logo"><img src="/logo.png" alt="NEUTRALIZE.AI logo" /> NEUTRALIZE.AI</div>
     <h1>Welcome back</h1>
     <p class="subtitle">Sign in to continue humanizing your text.</p>
 
@@ -310,6 +315,9 @@
 
     <div class="switch-link">
       Don't have an account? <a href="/signup.html">Create one</a>
+    </div>
+    <div class="switch-link" style="margin-top:10px;">
+      <a href="/premium.html">View Pro features</a>
     </div>
   </div>
 

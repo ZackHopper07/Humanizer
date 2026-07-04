@@ -71,12 +71,21 @@
     }
 
     .nav-logo {
-      width: 30px; height: 30px;
-      background: linear-gradient(135deg, #5b4bdb, #8b5cf6);
-      border-radius: 8px;
+      width: 36px; height: 36px;
       display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      border-radius: 10px;
+      padding: 0;
+      background: transparent;
     }
-    .nav-logo svg { width: 16px; height: 16px; fill: white; }
+    .nav-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      image-rendering: auto;
+    }
 
     .nav-links { display: flex; gap: 4px; }
     .nav-link {
@@ -112,6 +121,16 @@
       border-color: var(--accent);
     }
     .btn-nav-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: white; }
+    .btn-nav-pro.active {
+      background: linear-gradient(135deg, #5b4bdb, #8b5cf6);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(91,75,219,0.16);
+    }
+    .btn-nav-pro.active:hover {
+      background: linear-gradient(135deg, #4838c9, #7c3aed);
+      color: white;
+    }
 
     /* ── Main Layout ── */
     main {
@@ -489,7 +508,7 @@
   <div class="nav-left">
     <a class="nav-brand" href="/">
       <div class="nav-logo">
-        <svg viewBox="0 0 24 24"><path d="M13 2L4.09 12.26a1 1 0 0 0 .91 1.74h7L11 22l8.91-10.26a1 1 0 0 0-.91-1.74h-7Z"/></svg>
+        <img src="/logo.png" alt="NEUTRALIZE.AI logo" />
       </div>
       NEUTRALIZE.AI
     </a>
@@ -499,7 +518,7 @@
   </div>
   <div class="nav-right">
     <button class="btn-nav" onclick="handleLogout()">Log out</button>
-    <button class="btn-nav btn-nav-primary">Upgrade ✦</button>
+    <button class="btn-nav btn-nav-primary btn-nav-pro" id="upgradeBtn" onclick="handleUpgrade()">Upgrade ✦</button>
   </div>
 </nav>
 
@@ -679,6 +698,7 @@
   const statsRow       = document.getElementById('statsRow');
   const outputDot      = document.getElementById('outputDot');
   const wordLimitBadge = document.getElementById('wordLimitBadge');
+  const upgradeBtn     = document.getElementById('upgradeBtn');
 
   let rawOutput    = '';
   let originalText = '';
@@ -693,6 +713,21 @@
       document.body.style.visibility = 'visible';
     }
   });
+
+  function setUpgradeButtonState() {
+    const isPro = localStorage.getItem('neutralize-plan') === 'pro';
+    if (upgradeBtn) {
+      upgradeBtn.classList.toggle('active', isPro);
+      upgradeBtn.textContent = isPro ? 'Pro Active ✓' : 'Upgrade ✦';
+      upgradeBtn.setAttribute('aria-pressed', String(isPro));
+    }
+  }
+
+  function handleUpgrade() {
+    window.location.href = '/premium.html';
+  }
+
+  setUpgradeButtonState();
 
   // ── Logout ──
   async function handleLogout() {
