@@ -4,10 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Upgrade to Pro — NEUTRALIZE.AI</title>
+  <script>
+    /* Apply saved/system theme before paint to avoid a flash */
+    (function () {
+      try {
+        var saved = localStorage.getItem('neutralize-theme');
+        var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-2: #f0f2f5;
+      --border: #e4e7ec;
+      --text: #0f1117;
+      --muted: #6b7280;
+      --accent: #5b4bdb;
+      --accent-2: #8b5cf6;
+      --accent-soft: rgba(91, 75, 219, 0.10);
+      --green: #12b76a;
+      --shadow: 0 10px 30px rgba(16, 24, 40, 0.10);
+      --glow: rgba(91, 75, 219, 0.10);
+    }
+
+    [data-theme="dark"] {
       --bg: #0b0d14;
       --surface: #121723;
       --surface-2: #171d2d;
@@ -19,12 +44,16 @@
       --accent-soft: rgba(91, 75, 219, 0.15);
       --green: #2dd4bf;
       --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --glow: rgba(91, 75, 219, 0.22);
     }
+
+    /* Lighter pill text reads better on the dark panel */
+    [data-theme="dark"] .pill { color: #c7bfff; }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-      background: radial-gradient(circle at top left, rgba(91,75,219,0.22), transparent 30%), var(--bg);
+      background: radial-gradient(circle at top left, var(--glow), transparent 30%), var(--bg);
       color: var(--text);
       min-height: 100vh;
       padding: 24px;
@@ -58,7 +87,7 @@
       padding: 8px 12px;
       border-radius: 999px;
       background: var(--accent-soft);
-      color: #c7bfff;
+      color: var(--accent);
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.14em;
@@ -293,5 +322,6 @@
       payBtn.textContent = 'Pro Active';
     }
   </script>
+  <script src="/theme.js"></script>
 </body>
 </html>
