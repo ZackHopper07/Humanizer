@@ -758,8 +758,12 @@
     }
   });
 
+  // Pro isn't tracked server-side yet. Clear the flag the old demo checkout
+  // set without taking payment, so nobody sees "Pro Active" they didn't buy.
+  try { localStorage.removeItem('neutralize-plan'); } catch (e) {}
+
   function setUpgradeButtonState() {
-    const isPro = localStorage.getItem('neutralize-plan') === 'pro';
+    const isPro = false;
     if (upgradeBtn) {
       upgradeBtn.classList.toggle('active', isPro);
       upgradeBtn.textContent = isPro ? 'Pro Active ✓' : 'Upgrade ✦';
