@@ -69,7 +69,7 @@ function runAll() {
         (r.definitive ? "  [chatbot leftovers]" : "")
       );
       console.log(pad("", 13) + "top tells: " + topCategories(r) +
-        `  | sent SD ${r.signals.rhythm.lengthSD}, 8–20 band ${r.signals.rhythm.bandShare}%, runs ${r.signals.rhythm.similarRuns}`);
+        `  | variation ${r.signals.rhythm.variation}, specific ${r.signals.specificity.density}/100w, 8–20 band ${r.signals.rhythm.bandShare}%, runs ${r.signals.rhythm.similarRuns}`);
     }
     const human = rows.filter(r => r.label === "human");
     const ai = rows.filter(r => r.label === "ai");
@@ -90,7 +90,8 @@ function runOne(file) {
 
   console.log(`\n${path.basename(file)} — AI ${r.display} (${r.aiPercent}%), likelihood ${r.likelihood}, ${r.words} words${r.qualifying ? "" : " (under 300: less reliable)"}`);
   const rh = r.signals.rhythm;
-  console.log(`rhythm: risk ${rh.risk} | ${rh.sentences} sentences, mean ${rh.meanLength}, SD ${rh.lengthSD}, 8–20 band ${rh.bandShare}%, similar runs ${rh.similarRuns}`);
+  console.log(`rhythm: risk ${rh.risk} | ${rh.sentences} sentences, mean ${rh.meanLength}, SD ${rh.lengthSD}, variation ${rh.variation}, 8–20 band ${rh.bandShare}%, similar runs ${rh.similarRuns}`);
+  console.log(`specific: risk ${r.signals.specificity.risk} | ${r.signals.specificity.density} names/numbers per 100 words`);
   console.log(`tells:  risk ${r.signals.tells.risk} | ${r.signals.tells.density} weighted hits per 100 words`);
   for (const [c, v] of Object.entries(r.signals.tells.byCategory)) {
     console.log(`        ${pad(c, 26)} ×${pad(v.count, 3)} e.g. ${v.examples.join("; ")}`);
