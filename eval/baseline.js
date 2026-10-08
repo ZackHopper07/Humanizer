@@ -128,7 +128,7 @@ async function runFull() {
         const { output, analysis } = await PIPELINES[key].run({ apiKey, text: s.text, tone, region: "neutral" });
         const secs = ((Date.now() - t0) / 1000).toFixed(1);
         fs.writeFileSync(path.join(outDir, `${s.name}.txt`), output + "\n");
-        rows.push({ s, key, tone, before, after: detect(output), secs, kept: specificsKept(s.text, output), fix: analysis.thirdPassTriggered });
+        rows.push({ s, key, tone, before, after: detect(output), secs, kept: specificsKept(s.text, output), fix: analysis.thirdPassTriggered, calls: analysis.claudeCalls ?? "5–6", lost: analysis.missingFacts ? analysis.missingFacts.length : "?" });
         console.log(`  ${pad(s.name, 34)} ${pad(key, 7)} done in ${secs}s`);
       } catch (err) {
         console.log(`  ${pad(s.name, 34)} ${pad(key, 7)} FAILED — ${err.message}`);
@@ -136,14 +136,14 @@ async function runFull() {
     }
   }
 
-  console.log("\n" + pad("sample", 34) + pad("pipeline", 9) + pad("words", 11) + pad("likelihood", 13) + pad("AI %", 12) + pad("specifics kept", 16) + pad("fix pass", 10) + "time");
+  console.log("\n" + pad("sample", 34) + pad("pipeline", 9) + pad("words", 11) + pad("likelihood", 13) + pad("AI %", 12) + pad("specifics kept", 16) + pad("calls", 7) + pad("facts lost", 12) + "time");
   console.log("─".repeat(112));
   for (const r of rows) {
     console.log(
       pad(r.s.name, 34) + pad(r.key, 9) + pad(`${r.before.words}→${r.after.words}`, 11) +
       pad(`${r.before.likelihood} → ${r.after.likelihood}`, 13) +
       pad(`${r.before.aiPercent} → ${r.after.display}`, 12) + pad(r.kept, 16) +
-      pad(r.fix ? "yes" : "no", 10) + `${r.secs}s`
+      pad(r.calls, 7) + pad(r.lost, 12) + `${r.secs}s`
     );
   }
   for (const key of pipelines) {
