@@ -1,3 +1,4 @@
 node_modules/
 .env
-*firebase-adminsdk*.jsoneval/outputs/
+*firebase-adminsdk*.json
+eval/outputs/
