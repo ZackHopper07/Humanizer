@@ -63,7 +63,10 @@ const db = serviceAccount ? admin.firestore() : null;
 // ─────────────────────────────────────────────
 // Admin accounts — no word limit
 // ─────────────────────────────────────────────
-const ADMIN_EMAILS = ["shresthavinit@gmail.com"];
+// Comma-separated ADMIN_EMAILS in .env overrides the default
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "shresthavinit@gmail.com")
+  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+const isAdminEmail = email => !!email && ADMIN_EMAILS.includes(email.toLowerCase());
 
 // ─────────────────────────────────────────────
 // Auth Middleware
@@ -110,69 +113,74 @@ async function checkAndUpdateWordCount(uid, wordsToAdd) {
   });
 }
 
+// Give back words reserved for a rewrite that failed. Only touches today's
+// count, so a failure just after UTC midnight can't affect the new day.
+async function refundWordCount(uid, words, dayKey) {
+  const docRef = db.collection("usage").doc(uid);
+  return await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const data = doc.exists ? doc.data() : {};
+    if (data.day !== dayKey) return;
+    tx.set(docRef, { day: dayKey, wordsUsed: Math.max(0, (data.wordsUsed || 0) - words) }, { merge: false });
+  });
+}
+
 // ─────────────────────────────────────────────
 // API Routes
 // ─────────────────────────────────────────────
 
+// Health check — reports whether a key is configured, never any part of it
 app.get("/api/test", (req, res) => {
   const key = process.env.ANTHROPIC_API_KEY;
-  res.json({
-    ok: !!key && key !== "your_api_key_here",
-    message: key ? `Key loaded: ${key.slice(0, 14)}...` : "No API key set",
-  });
+  res.json({ ok: !!key && key !== "your_api_key_here" });
 });
 
+// Card details are collected on Stripe's hosted checkout page, never here.
 app.post("/api/premium/checkout", async (req, res) => {
-  const { plan, customerName, customerEmail, cardLast4 } = req.body || {};
+  const { plan, customerEmail } = req.body || {};
 
   if (plan !== "pro") {
     return res.status(400).json({ error: "Unsupported plan." });
   }
 
-  if (!customerName || !customerEmail || !cardLast4) {
-    return res.status(400).json({ error: "Please provide a valid payment payload." });
-  }
-
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const stripePriceId = process.env.STRIPE_PRICE_ID;
 
-  if (stripeSecretKey && stripePriceId) {
-    try {
-      const params = new URLSearchParams({
-        mode: 'subscription',
-        success_url: `${process.env.APP_URL || 'http://localhost:3000'}/?checkout=success`,
-        cancel_url: `${process.env.APP_URL || 'http://localhost:3000'}/premium.html?checkout=cancel`,
-        'line_items[0][price]': stripePriceId,
-        'line_items[0][quantity]': '1',
-        customer_email: customerEmail,
-      });
-
-      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params,
-      });
-
-      const stripeData = await response.json();
-      if (!response.ok) {
-        throw new Error(stripeData.error?.message || 'Stripe checkout failed');
-      }
-
-      return res.json({ ok: true, checkoutUrl: stripeData.url, message: 'Checkout session created.' });
-    } catch (err) {
-      console.error('Stripe checkout error:', err);
-      return res.status(502).json({ error: 'Stripe checkout could not be created.' });
-    }
+  if (!stripeSecretKey || !stripePriceId) {
+    return res.status(503).json({ error: "Payments aren't set up yet, so Pro can't be purchased right now." });
   }
 
-  return res.json({
-    ok: true,
-    mock: true,
-    message: `Pro access enabled for ${customerEmail} using the secure demo checkout gateway.`,
-  });
+  try {
+    const params = new URLSearchParams({
+      mode: 'subscription',
+      success_url: `${process.env.APP_URL || 'http://localhost:3000'}/?checkout=success`,
+      cancel_url: `${process.env.APP_URL || 'http://localhost:3000'}/premium.html?checkout=cancel`,
+      'line_items[0][price]': stripePriceId,
+      'line_items[0][quantity]': '1',
+    });
+    if (typeof customerEmail === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
+      params.set("customer_email", customerEmail.trim());
+    }
+
+    const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${stripeSecretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
+    });
+
+    const stripeData = await response.json();
+    if (!response.ok) {
+      throw new Error(stripeData.error?.message || 'Stripe checkout failed');
+    }
+
+    return res.json({ ok: true, checkoutUrl: stripeData.url, message: 'Checkout session created.' });
+  } catch (err) {
+    console.error('Stripe checkout error:', err);
+    return res.status(502).json({ error: 'Stripe checkout could not be created.' });
+  }
 });
 
 app.get("/api/usage", requireAuth, async (req, res) => {
@@ -181,7 +189,7 @@ app.get("/api/usage", requireAuth, async (req, res) => {
       return res.status(503).json({ error: "Usage tracking is unavailable until Firebase Admin is configured." });
     }
 
-    if (ADMIN_EMAILS.includes(req.user.email)) {
+    if (isAdminEmail(req.user.email)) {
       return res.json({
         wordsUsed: 0, wordsRemaining: 999999,
         dailyLimit: 999999, resetsAt: "never — admin account", isAdmin: true,
@@ -215,8 +223,11 @@ app.post("/api/humanize", requireAuth, async (req, res) => {
   }
 
   const wordCount = countWords(text);
-  const isAdmin = ADMIN_EMAILS.includes(req.user.email);
+  const isAdmin = isAdminEmail(req.user.email);
+  const dayKey = getTodayKey();
 
+  // Words are reserved up front (so parallel requests can't overshoot the
+  // limit) and refunded below if the rewrite fails.
   let limitCheck = { allowed: true, wordsUsed: 0, wordsRemaining: 999999 };
   if (!isAdmin) {
     if (!db) {
@@ -248,7 +259,17 @@ app.post("/api/humanize", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    res.status(500).json({ error: err.message });
+    let usage;
+    if (!isAdmin) {
+      try {
+        await refundWordCount(req.user.uid, wordCount, dayKey);
+        const refunded = Math.max(0, limitCheck.wordsUsed - wordCount);
+        usage = { wordsUsed: refunded, wordsRemaining: DAILY_WORD_LIMIT - refunded, dailyLimit: DAILY_WORD_LIMIT };
+      } catch (refundErr) {
+        console.error("Word refund failed:", refundErr);
+      }
+    }
+    res.status(500).json({ error: err.message, usage });
   }
 });
 

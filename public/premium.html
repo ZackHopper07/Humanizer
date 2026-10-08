@@ -233,7 +233,7 @@
 
       <section class="card">
         <h2>Secure checkout</h2>
-        <p>Complete the gateway below to activate Pro instantly. The checkout is connected to a secure server endpoint and will activate your subscription on success.</p>
+        <p>You'll be taken to Stripe's secure checkout page to pay. Card details are entered on Stripe, never on this site.</p>
 
         <div class="price-box">
           <div>Pro plan</div>
@@ -242,17 +242,11 @@
         </div>
 
         <form id="checkoutForm" style="margin-top:16px; display:grid; gap:12px;">
-          <input type="text" id="customerName" placeholder="Full name" required style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
-          <input type="email" id="customerEmail" placeholder="Email address" required style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
-          <input type="text" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" required style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5" required style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
-            <input type="text" id="cardCvc" placeholder="CVC" maxlength="4" required style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
-          </div>
-          <button class="btn btn-primary" type="submit" id="payBtn">Pay $19</button>
+          <input type="email" id="customerEmail" placeholder="Email address (optional)" style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);" />
+          <button class="btn btn-primary" type="submit" id="payBtn">Continue to secure checkout</button>
         </form>
 
-        <div class="status" id="statusText">Enter your details and confirm payment to unlock Pro.</div>
+        <div class="status" id="statusText">Payment is handled by Stripe.</div>
       </section>
     </div>
   </div>
@@ -267,34 +261,15 @@
       statusText.style.color = isSuccess ? '#2dd4bf' : '#f59e0b';
     }
 
-    document.getElementById('cardNumber').addEventListener('input', (e) => {
-      const value = e.target.value.replace(/\D/g, '').slice(0, 16);
-      e.target.value = value.replace(/(.{4})/g, '$1 ').trim();
-    });
-
-    document.getElementById('cardExpiry').addEventListener('input', (e) => {
-      let value = e.target.value.replace(/\D/g, '').slice(0, 4);
-      if (value.length > 2) value = value.slice(0, 2) + '/' + value.slice(2);
-      e.target.value = value;
-    });
-
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const payload = {
         plan: 'pro',
-        customerName: document.getElementById('customerName').value.trim(),
         customerEmail: document.getElementById('customerEmail').value.trim(),
-        cardLast4: document.getElementById('cardNumber').value.replace(/\D/g, '').slice(-4),
       };
 
-      if (!payload.customerName || !payload.customerEmail || payload.cardLast4.length < 4) {
-        setStatus('Please complete all payment fields.', false);
-        return;
-      }
-
       payBtn.disabled = true;
-      payBtn.textContent = 'Processing...';
-      setStatus('Processing payment...', true);
+      payBtn.textContent = 'Opening checkout...';
 
       try {
         const response = await fetch('/api/premium/checkout', {
@@ -304,22 +279,19 @@
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Payment failed');
+        if (!response.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout could not be started.');
 
-        localStorage.setItem('neutralize-plan', 'pro');
-        setStatus(data.message || 'Pro access enabled. Redirecting to your dashboard...', true);
-        setTimeout(() => window.location.href = '/', 900);
+        // Pro is granted only after Stripe confirms payment, not here
+        window.location.href = data.checkoutUrl;
       } catch (error) {
-        setStatus(error.message || 'Payment failed. Please try again.', false);
+        setStatus(error.message || 'Checkout could not be started. Please try again.', false);
         payBtn.disabled = false;
-        payBtn.textContent = 'Pay $19';
+        payBtn.textContent = 'Continue to secure checkout';
       }
     });
 
-    if (localStorage.getItem('neutralize-plan') === 'pro') {
-      setStatus('You already have Pro access.', true);
-      payBtn.disabled = true;
-      payBtn.textContent = 'Pro Active';
+    if (new URLSearchParams(window.location.search).get('checkout') === 'cancel') {
+      setStatus('Checkout was cancelled. You have not been charged.', false);
     }
   </script>
   <script src="/theme.js"></script>
