@@ -3,8 +3,9 @@
 // Measure the humanizer with the local detector.
 //
 //   node eval/baseline.js local              legacy post-processing only (no API calls)
-//   node eval/baseline.js full [--all]       full legacy pipeline via Claude
-//                                            (user-* AI samples, or every AI sample with --all)
+//   node eval/baseline.js full [--all] [--pipeline=legacy|new|both]
+//                                            full pipelines via Claude (user-* AI samples,
+//                                            or every AI sample with --all)
 //
 // "local" runs the regex post-processing steps (word swaps, noise injection…)
 // on every sample many times and reports how the detector score moves.
@@ -90,43 +91,70 @@ function runLocal() {
   }
 }
 
+// Share of the input's specifics (numbers, names, citations) that survive the rewrite
+function specificsKept(input, output) {
+  const grab = t => new Set((t.match(/\b\d[\d.,%]*\b|(?<=\s)\p{Lu}[\p{L}'’-]{2,}/gu) || []).map(x => x.toLowerCase()));
+  const a = grab(input);
+  if (!a.size) return "—";
+  const b = output.toLowerCase();
+  return Math.round(100 * [...a].filter(x => b.includes(x)).length / a.size) + "%";
+}
+
+const PIPELINES = {
+  legacy: { label: "legacy", run: legacy.humanizeLegacy },
+  new: { label: "new", run: require("../lib/pipeline").humanize },
+};
+
 async function runFull() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || apiKey === "your_api_key_here") {
     console.error("ANTHROPIC_API_KEY is not set. Create a .env file with ANTHROPIC_API_KEY=... first.");
     process.exit(1);
   }
-  fs.mkdirSync(OUT_DIR, { recursive: true });
+  const which = (process.argv.find(a => a.startsWith("--pipeline=")) || "--pipeline=both").split("=")[1];
+  const pipelines = which === "both" ? ["legacy", "new"] : [which];
   const samples = load("ai").filter(s => all || s.name.startsWith("user-"));
-  console.log(`\nFull legacy pipeline on ${samples.length} AI samples (≈6 Claude calls each)…\n`);
+  console.log(`\nRunning ${pipelines.join(" + ")} on ${samples.length} AI samples…\n`);
+
   const rows = [];
   for (const s of samples) {
     const tone = s.name.includes("academic") ? "academic" : "casual";
-    const t0 = Date.now();
-    try {
-      const { output, analysis } = await legacy.humanizeLegacy({ apiKey, text: s.text, tone, region: "neutral" });
-      const secs = ((Date.now() - t0) / 1000).toFixed(1);
-      fs.writeFileSync(path.join(OUT_DIR, `${s.name}.txt`), output + "\n");
-      const before = detect(s.text);
-      const after = detect(output);
-      rows.push({ s, before, after, secs, selfScore: analysis.outputHumanScore, words: after.words });
-      console.log(`  ${s.name}: done in ${secs}s`);
-    } catch (err) {
-      console.log(`  ${s.name}: FAILED — ${err.message}`);
+    const before = detect(s.text);
+    for (const key of pipelines) {
+      const outDir = path.join(__dirname, "outputs", key);
+      fs.mkdirSync(outDir, { recursive: true });
+      const t0 = Date.now();
+      try {
+        const { output, analysis } = await PIPELINES[key].run({ apiKey, text: s.text, tone, region: "neutral" });
+        const secs = ((Date.now() - t0) / 1000).toFixed(1);
+        fs.writeFileSync(path.join(outDir, `${s.name}.txt`), output + "\n");
+        rows.push({ s, key, tone, before, after: detect(output), secs, kept: specificsKept(s.text, output), fix: analysis.thirdPassTriggered });
+        console.log(`  ${pad(s.name, 34)} ${pad(key, 7)} done in ${secs}s`);
+      } catch (err) {
+        console.log(`  ${pad(s.name, 34)} ${pad(key, 7)} FAILED — ${err.message}`);
+      }
     }
   }
-  console.log("\n" + pad("sample", 40) + pad("tone", 9) + pad("words in→out", 14) + pad("likelihood", 14) + pad("AI %", 14) + pad("self-score", 12) + "time");
+
+  console.log("\n" + pad("sample", 34) + pad("pipeline", 9) + pad("words", 11) + pad("likelihood", 13) + pad("AI %", 12) + pad("specifics kept", 16) + pad("fix pass", 10) + "time");
   console.log("─".repeat(112));
-  for (const { s, before, after, secs, selfScore } of rows) {
+  for (const r of rows) {
     console.log(
-      pad(s.name, 40) + pad(s.name.includes("academic") ? "academic" : "casual", 9) +
-      pad(`${before.words}→${after.words}`, 14) +
-      pad(`${before.likelihood} → ${after.likelihood}`, 14) +
-      pad(`${before.aiPercent} → ${after.display}`, 14) +
-      pad(`${selfScore}/100`, 12) + `${secs}s`
+      pad(r.s.name, 34) + pad(r.key, 9) + pad(`${r.before.words}→${r.after.words}`, 11) +
+      pad(`${r.before.likelihood} → ${r.after.likelihood}`, 13) +
+      pad(`${r.before.aiPercent} → ${r.after.display}`, 12) + pad(r.kept, 16) +
+      pad(r.fix ? "yes" : "no", 10) + `${r.secs}s`
     );
   }
-  console.log(`\nOutputs saved to ${path.relative(process.cwd(), OUT_DIR)}/ — inspect with: npm run eval -- <file>\n`);
+  for (const key of pipelines) {
+    const mine = rows.filter(r => r.key === key);
+    if (!mine.length) continue;
+    const avgLik = avg(mine.map(r => r.after.likelihood)).toFixed(0);
+    const avgPct = avg(mine.map(r => r.after.aiPercent)).toFixed(0);
+    const avgSecs = avg(mine.map(r => +r.secs)).toFixed(1);
+    console.log(`${pad(key, 8)} average: likelihood ${avgLik}, AI ${avgPct}%, ${avgSecs}s per text`);
+  }
+  console.log(`\nOutputs saved to eval/outputs/<pipeline>/ — inspect with: npm run eval -- eval/outputs/new/<file>.txt\n`);
 }
 
 if (mode === "full") runFull();
